@@ -788,7 +788,7 @@
     "Manufacturer": "Global Handasa (truck trailer) (Israel)"
   },
   {
-    "WMI": "KL",
+    "WMI": "KLA",
     "Manufacturer": "Daewoo General Motors South Korea"
   },
   {
@@ -848,7 +848,7 @@
     "Manufacturer": "GM Daewoo/GM Korea (Chevrolet car from Changwon plant (Spark))"
   },
   {
-    "WMI": "KM",
+    "WMI": "KMA-KMB",
     "Manufacturer": "Hyundai"
   },
   {
@@ -7352,7 +7352,7 @@
     "Manufacturer": "Volgabus (Russia)"
   },
   {
-    "WMI": "1A4 1A8",
+    "WMI": "1A4/1A8",
     "Manufacturer": "Chrysler brand MPV/SUV 2006–2009 only"
   },
   {
@@ -7628,7 +7628,7 @@
     "Manufacturer": "Seagrave Fire Apparatus"
   },
   {
-    "WMI": "1G",
+    "WMI": "1GA-1G0",
     "Manufacturer": "General Motors USA"
   },
   {
@@ -8108,11 +8108,11 @@
     "Manufacturer": "White Motor Company truck"
   },
   {
-    "WMI": "1WV 1WW",
+    "WMI": "1WV/1WW",
     "Manufacturer": "Winnebago Industries"
   },
   {
-    "WMI": "1WX 1WY",
+    "WMI": "1WX/1WY",
     "Manufacturer": "White Motor Company incomplete vehicle"
   },
   {
@@ -8164,7 +8164,7 @@
     "Manufacturer": "Mercury made by AutoAlliance International"
   },
   {
-    "WMI": "1Z3 1Z7",
+    "WMI": "1Z3/1Z7",
     "Manufacturer": "Mitsubishi Raider"
   },
   {
@@ -8232,11 +8232,11 @@
     "Manufacturer": "Imperial"
   },
   {
-    "WMI": "2A4 2A8",
+    "WMI": "2A4/2A8",
     "Manufacturer": "Chrysler brand MPV/SUV 2006–2011 only"
   },
   {
-    "WMI": "2AY 2AZ",
+    "WMI": "2AY/2AZ",
     "Manufacturer": "Hino"
   },
   {
@@ -8704,7 +8704,7 @@
     "Manufacturer": "Peterbilt truck"
   },
   {
-    "WMI": "3A4 3A8",
+    "WMI": "3A4/3A8",
     "Manufacturer": "Chrysler brand MPV 2006–2010 only"
   },
   {
@@ -8864,7 +8864,7 @@
     "Manufacturer": "Sterling Bullet"
   },
   {
-    "WMI": "3G",
+    "WMI": "3GA-3G0",
     "Manufacturer": "General Motors Mexico"
   },
   {
