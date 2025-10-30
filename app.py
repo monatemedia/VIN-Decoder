@@ -2,8 +2,8 @@
 import os
 from flask import Flask
 from models.country import db
-from models import Country, WmiRegionCode
-from seeders import seed_countries, seed_wmi_region_codes
+from models import Country, WmiRegionCode, WmiCountryCode, WmiFactoryCode
+from seeders import seed_countries, seed_wmi_region_codes, seed_wmi_country_codes, seed_wmi_factory_codes
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vin.db'
@@ -27,9 +27,13 @@ if __name__ == "__main__":
         print("\nTables created:")
         print("  - countries")
         print("  - wmi_region_codes")
+        print("  - wmi_country_codes")
+        print("  - wmi_factory_codes")
         
         # Run seeders
         seed_countries()
         seed_wmi_region_codes()
+        seed_wmi_country_codes()
+        seed_wmi_factory_codes()
         
         print("\n🎉 All done! Database is ready to use.")

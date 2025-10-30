@@ -1,3 +1,3 @@
-from .country import Country, WmiRegionCode
+from .country import Country, WmiRegionCode, WmiCountryCode, WmiFactoryCode
 
-__all__ = ['Country', 'WmiRegionCode']
+__all__ = ['Country', 'WmiRegionCode', 'WmiCountryCode', 'WmiFactoryCode']
