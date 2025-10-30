@@ -13,6 +13,7 @@ COUNTRY_NAME_MAPPINGS = {
     'Vietnam': ['Vietnam', 'Viet Nam'],
     'Ivory Coast': ['Ivory Coast', "Côte d'Ivoire"],
     'Czech Republic': ['Czech Republic', 'Czechia'],
+    'Unknown': ['Unknown'],  # Special catch-all
 }
 
 

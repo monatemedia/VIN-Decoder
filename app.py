@@ -3,7 +3,14 @@ import os
 from flask import Flask
 from models.country import db
 from models import Country, WmiRegionCode, WmiCountryCode, WmiFactoryCode
-from seeders import seed_countries, seed_wmi_region_codes, seed_wmi_country_codes, seed_wmi_factory_codes
+from seeders import (
+    seed_countries, 
+    seed_wmi_region_codes, 
+    seed_wmi_country_codes, 
+    fill_missing_wmi_ranges,
+    seed_wmi_factory_codes
+)
+from utils import validate_wmi_country_codes
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vin.db'
@@ -34,6 +41,14 @@ if __name__ == "__main__":
         seed_countries()
         seed_wmi_region_codes()
         seed_wmi_country_codes()
+        
+        # Fill any missing ranges with "Unknown" country
+        fill_missing_wmi_ranges()
+        
+        # Validate WMI country codes after filling gaps
+        validate_wmi_country_codes()
+        
+        # Continue with factory codes
         seed_wmi_factory_codes()
         
         print("\n🎉 All done! Database is ready to use.")

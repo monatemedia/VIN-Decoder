@@ -89,7 +89,7 @@
   },
   {
     "range": "BT",
-    "country": "Swaziland"
+    "country": "Eswatini"
   },
   {
     "range": "BU",
@@ -580,8 +580,20 @@
     "country": "Italy"
   },
   {
+    "range": "ZV-ZW",
+    "country": "Europe"
+  },
+  {
     "range": "ZX-ZZ",
     "country": "Slovenia"
+  },
+  {
+    "range": "Z1",
+    "country": "San Marino"
+  },
+  {
+    "range": "Z2",
+    "country": "Europe"
   },
   {
     "range": "Z3-Z5",

@@ -68,10 +68,12 @@ class WmiFactoryCode(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     wmi = db.Column(db.String(3), nullable=False, unique=True, index=True)
     manufacturer = db.Column(db.Text, nullable=False)
-    country_id = db.Column(db.Integer, db.ForeignKey('countries.id', ondelete='CASCADE'), nullable=False)
+    country_id = db.Column(db.Integer, db.ForeignKey('countries.id', ondelete='CASCADE'), nullable=True)
+    region = db.Column(db.String(100), nullable=True)  # For when country is not available
     
     # Relationships
     country = db.relationship('Country', backref=db.backref('wmi_factory_codes', lazy=True))
     
     def __repr__(self):
-        return f"<WmiFactoryCode {self.wmi} -> {self.manufacturer[:30]}...>"
+        location = self.country.common_name if self.country else self.region or "Unknown"
+        return f"<WmiFactoryCode {self.wmi} -> {self.manufacturer[:30]}... ({location})>"

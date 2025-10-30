@@ -75,6 +75,9 @@ def seed_wmi_country_codes():
     
     print("\n📥 Loading WMI country codes from ./json/wmi_country_codes.json...")
     
+    # List of known regions (not countries)
+    KNOWN_REGIONS = ['Africa', 'Asia', 'Europe', 'North America', 'South America', 'Oceania']
+    
     try:
         with open("./json/wmi_country_codes.json", "r", encoding="utf-8") as f:
             wmi_data = json.load(f)
@@ -88,16 +91,33 @@ def seed_wmi_country_codes():
         
         for entry in wmi_data:
             range_str = entry.get('range', '')
-            country_name = entry.get('country', '')
+            location_name = entry.get('country', '')
             
-            # Find the country in the database
-            country = find_country_by_name(country_name)
+            # Check if it's a region or a country
+            is_region = location_name in KNOWN_REGIONS
             
-            if not country:
-                error_msg = f"⚠ Country not found: {country_name} (range: {range_str})"
-                print(error_msg)
-                errors.append(error_msg)
-                continue
+            if is_region:
+                # For region entries, use the first country we find in that region as a placeholder
+                # This allows the codes to be in the database for factory code lookups
+                country = country.query.filter_by(region=location_name).first()
+                
+                if not country:
+                    error_msg = f"⚠ No countries found in region: {location_name} (range: {range_str})"
+                    print(error_msg)
+                    errors.append(error_msg)
+                    skipped_count += 1
+                    continue
+                
+                print(f"\n📍 Region: {location_name} ({range_str}) → Linked to {country.common_name}")
+            else:
+                # Find the country in the database
+                country = find_country_by_name(location_name)
+            
+                if not country:
+                    error_msg = f"⚠ Country not found: {location_name} (range: {range_str})"
+                    print(error_msg)
+                    errors.append(error_msg)
+                    continue
             
             # Expand the range into individual codes
             codes = expand_range(range_str)
@@ -108,7 +128,8 @@ def seed_wmi_country_codes():
                 errors.append(error_msg)
                 continue
             
-            print(f"\n🌍 {country.common_name}: {range_str} ({len(codes)} codes)")
+            if not is_region:
+                print(f"\n🌍 {country.common_name}: {range_str} ({len(codes)} codes)")
             
             # Insert each code
             for code in codes:

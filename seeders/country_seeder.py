@@ -56,6 +56,27 @@ def seed_countries():
             print(f"✓ {country.common_name}")
             inserted_count += 1
         
+        # Add special "Unknown" country for unassigned/invalid VIN ranges
+        unknown_country = Country.query.filter_by(iso_alpha2='XX').first()
+        if not unknown_country:
+            unknown_country = Country(
+                iso_alpha2='XX',
+                iso_alpha3='XXX',
+                iso_numeric='999',
+                name='Unknown',
+                common_name='Unknown',
+                region='Unknown',
+                subregion='Unknown',
+                currency_code=None,
+                calling_code=None,
+                tld=None,
+                flag_emoji='🏳',
+                is_active=True
+            )
+            db.session.add(unknown_country)
+            print(f"✓ Unknown (special catch-all country)")
+            inserted_count += 1
+        
         # Commit all changes
         db.session.commit()
         
