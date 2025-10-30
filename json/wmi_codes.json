@@ -1,0 +1,44 @@
+{
+  "NorthAmerica": {
+    "1": ["United States"],
+    "2": ["Canada"],
+    "3": ["Mexico"],
+    "4": ["United States"],
+    "5": ["United States"]
+  },
+  "Oceania": {
+    "6": ["Australia"],
+    "7": ["New Zealand"]
+  },
+  "SouthAmerica": {
+    "8": ["Argentina", "Chile", "Peru"],
+    "9": ["Brazil", "Colombia", "Venezuela"]
+  },
+  "Africa": {
+    "A": ["South Africa"],
+    "B": ["Angola", "Kenya", "Tanzania"],
+    "C": ["Benin", "Ivory Coast", "Morocco"],
+    "D": ["Egypt", "Zambia"],
+    "E": ["Ethiopia"],
+    "F": ["Ghana", "Nigeria", "Tunisia"]
+  },
+  "Asia": {
+    "J": ["Japan"],
+    "K": ["South Korea", "Israel", "Kazakhstan"],
+    "L": ["China", "Taiwan"],
+    "M": ["India", "Indonesia", "Thailand"],
+    "N": ["Pakistan", "Turkey", "Iran"],
+    "P": ["Philippines", "Malaysia", "Singapore"],
+    "R": ["United Arab Emirates", "Vietnam", "Saudi Arabia"]
+  },
+  "Europe": {
+    "S": ["United Kingdom", "Germany", "Poland", "Latvia"],
+    "T": ["Switzerland", "Czech Republic", "Hungary", "Portugal"],
+    "U": ["Denmark", "Ireland", "Romania", "Slovakia"],
+    "V": ["France", "Spain", "Austria", "Croatia", "Serbia"],
+    "W": ["Germany"],
+    "X": ["Russia", "Bulgaria", "Greece", "Netherlands"],
+    "Y": ["Sweden", "Finland", "Belgium", "Malta", "Norway"],
+    "Z": ["Italy", "Slovenia", "Lithuania"]
+  }
+}

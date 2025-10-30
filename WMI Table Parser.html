@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMI Rule Extractor (Range/Country)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better readability and structure */
+        textarea {
+            width: 100%;
+            min-height: 250px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        /* Custom style for the temporary notification */
+        .notification {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: opacity 0.3s ease-in-out;
+        }
+        /* Style for disabled buttons */
+        .disabled-button {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8 font-sans">
+    
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">WMI Code Extractor (Raw Rule List)</h1>
+        
+        <!-- Input Area for HTML Table -->
+        <div class="mb-8 p-6 bg-white shadow-lg rounded-xl">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Paste HTML Table Content Here</h2>
+            <textarea id="htmlInput" placeholder="Paste your HTML table code (e.g., <table>...</table>) that contains WMI ranges in the third column...">
+<tbody>
+    <tr><th>WMI</th><th>Region</th><th>Notes</th></tr>
+    <tr>
+        <td>A-C</td>
+        <td>Africa</td>
+        <td>
+            AA-AH = South Africa<br>
+            BF-BG = Kenya<br>
+            BU = Uganda<br>
+            CA-CB = Egypt
+        </td>
+    </tr>
+    <tr>
+        <td>J</td>
+        <td>Asia</td>
+        <td>
+            JA-JT = Japan<br>
+            LB = China<br>
+            MY = Thailand
+        </td>
+    </tr>
+    <tr>
+        <td>S-Z</td>
+        <td>Europe</td>
+        <td>
+            W0-W9 = Germany<br>
+            WZ = France<br>
+            W9 = Italy
+        </td>
+    </tr>
+    <tr>
+        <td>D-E</td>
+        <td>Oceania</td>
+        <td>
+            DB-DE = Australia<br>
+            D9-DA = New Zealand
+        </td>
+    </tr>
+</tbody>
+</textarea>
+            <p class="mt-3 text-sm text-gray-500">
+            <span class="font-bold">Note:</span> This tool extracts the **raw WMI range and Country** pairs from the third column in this <a href="https://en.wikibooks.org/wiki/Vehicle_Identification_Numbers_(VIN_codes)/World_Manufacturer_Identifier_(WMI)#WMI_Regions" target="_blank" class="text-blue-600 hover:underline">WMI Regions</a> table.
+            </p>
+        </div>
+
+        <!-- Button to Parse -->
+        <button id="parseButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition duration-150 ease-in-out transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50">
+            Parse Input and Extract Raw Rules
+        </button>
+
+        <!-- Output Display -->
+        <div class="mt-8 p-6 bg-white shadow-lg rounded-xl">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Parsed WMI Rules (JSON Array of Objects)</h2>
+            
+            <!-- Statistics Panel -->
+            <div id="stats" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 font-medium">
+                Click 'Parse' to see the total number of rules extracted.
+            </div>
+
+            <!-- Download and Copy Buttons -->
+            <div class="flex space-x-4 mb-4">
+                <button id="copyButton" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled-button" disabled>
+                    Copy to Clipboard
+                </button>
+                <button id="downloadButton" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out disabled-button" disabled>
+                    Download JSON
+                </button>
+            </div>
+
+            <pre id="output" class="bg-gray-800 text-green-300 p-4 rounded-lg overflow-x-auto text-sm">Paste your HTML and click 'Parse' to see the raw WMI rules here...</pre>
+        </div>
+    </div>
+
+    <script>
+        // --- Utility Functions ---
+
+        let currentJsonString = ""; // Global variable to hold the last generated JSON for download/copy
+
+        /**
+         * Displays a temporary notification message in the corner of the screen.
+         */
+        function alertMessage(message, isError = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.textContent = message;
+            msgDiv.className = `notification text-white ${isError 
+                ? 'bg-red-600' 
+                : 'bg-green-600'}`;
+            
+            msgDiv.style.opacity = '0';
+            document.body.appendChild(msgDiv);
+
+            setTimeout(() => {
+                msgDiv.style.opacity = '1';
+            }, 10);
+
+            setTimeout(() => {
+                msgDiv.style.opacity = '0';
+                setTimeout(() => msgDiv.remove(), 300);
+            }, 3000);
+        }
+
+        /**
+         * Downloads a JSON string as a file.
+         */
+        function downloadJSON() {
+            const jsonString = currentJsonString;
+            if (!jsonString || jsonString.length < 5) {
+                alertMessage("No data to download. Run the parser first.", true);
+                return;
+            }
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'raw_wmi_rules.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alertMessage("Download started: raw_wmi_rules.json");
+        }
+
+        /**
+         * Copies text to the clipboard.
+         */
+        function copyToClipboard() {
+            const text = currentJsonString;
+            if (!text || text.length < 5) {
+                alertMessage("No data to copy. Run the parser first.", true);
+                return;
+            }
+
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            tempInput.style.position = 'absolute';
+            tempInput.style.left = '-9999px'; 
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            
+            try {
+                document.execCommand('copy');
+                alertMessage(`Successfully copied ${text.length.toLocaleString()} characters to clipboard!`);
+            } catch (err) {
+                console.error('Could not copy text: ', err);
+                alertMessage("Failed to copy JSON. Check console for details.", true);
+            }
+            
+            document.body.removeChild(tempInput);
+        }
+
+
+        // --- Core Parsing Function ---
+
+        /**
+         * Parses the HTML input and extracts all WMI rule strings from the third column,
+         * structuring them into objects.
+         * @returns {Array<Object>} Array of raw rule objects (e.g., { range: "AA-AH", country: "South Africa" }).
+         */
+        function parseTable() {
+            const ruleArray = []; 
+            const htmlInput = document.getElementById('htmlInput').value.trim();
+            
+            if (!htmlInput) {
+                console.warn("Input is empty.");
+                return ruleArray;
+            }
+
+            const tempContainer = document.createElement('div');
+            // Wrap in a table if the user only provided tbody/tr (improving robustness)
+            const wrappedHtml = htmlInput.startsWith('<table') ? htmlInput : `<table>${htmlInput}</table>`;
+            tempContainer.innerHTML = wrappedHtml;
+
+            const rows = Array.from(tempContainer.querySelectorAll('tr'));
+            const dataRows = rows.length > 0 ? rows.slice(1) : []; // Skip header row
+            
+            if (dataRows.length === 0) {
+                 console.warn("No data rows found in the pasted table HTML.");
+                 return ruleArray;
+            }
+
+            for (const row of dataRows) {
+                const cells = row.querySelectorAll('td, th'); 
+                
+                // We are only interested in the third column (index 2)
+                if (cells.length < 3) continue;
+
+                const notesCell = cells[2];
+                
+                // Use innerHTML to grab the content and split by <br> tag
+                const notesHtml = notesCell.innerHTML.trim();
+                const noteEntries = notesHtml.split(/<br\s*\/?>/i)
+                                            .map(s => s.trim())
+                                            .filter(s => s.length > 0);
+                
+                // Process and collect the structured rule objects
+                for (const entry of noteEntries) {
+                    // Entry looks like: AA-AH = South Africa
+                    const parts = entry.split('=');
+                    if (parts.length !== 2) continue;
+
+                    const rangePart = parts[0].trim().toUpperCase(); // e.g., 'AA-AH', 'BU'
+                    const country = parts[1].trim(); // e.g., 'South Africa'
+                    
+                    ruleArray.push({
+                        range: rangePart,
+                        country: country
+                    });
+                }
+            }
+
+            return ruleArray; 
+        }
+
+        function parseTableAndDisplay() {
+            const result = parseTable(); // result is now an array of objects
+            const outputElement = document.getElementById('output');
+            const statsElement = document.getElementById('stats');
+            const copyButton = document.getElementById('copyButton');
+            const downloadButton = document.getElementById('downloadButton');
+            
+            const resultCount = result.length; // Count of rule objects
+            const jsonString = JSON.stringify(result, null, 2);
+
+            // Update the global variable
+            currentJsonString = jsonString;
+            
+            if (resultCount > 0) {
+                outputElement.textContent = jsonString;
+                outputElement.classList.remove('text-red-500');
+                outputElement.classList.add('text-green-300');
+                
+                statsElement.textContent = `✓ Successfully parsed ${resultCount.toLocaleString()} raw rule entries.`;
+                statsElement.className = 'mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800 font-medium';
+
+                // Enable buttons
+                copyButton.disabled = false;
+                downloadButton.disabled = false;
+                copyButton.classList.remove('disabled-button');
+                downloadButton.classList.remove('disabled-button');
+
+            } else {
+                outputElement.textContent = "Parsing failed. Check your pasted HTML structure and ensure it contains data rows with WMI notes in the third column. (Result count: 0)";
+                outputElement.classList.remove('text-green-300');
+                outputElement.classList.add('text-red-500');
+                
+                statsElement.textContent = `✗ No WMI rule entries were generated.`;
+                statsElement.className = 'mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-medium';
+                
+                // Disable buttons
+                copyButton.disabled = true;
+                downloadButton.disabled = true;
+                copyButton.classList.add('disabled-button');
+                downloadButton.classList.add('disabled-button');
+            }
+            
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Bind buttons
+            document.getElementById('parseButton').addEventListener('click', parseTableAndDisplay);
+            document.getElementById('downloadButton').addEventListener('click', downloadJSON);
+            document.getElementById('copyButton').addEventListener('click', copyToClipboard);
+
+            // Do NOT run parseTableAndDisplay() on load, wait for user click.
+        });
+    </script>
+</body>
+</html>

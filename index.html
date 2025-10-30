@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIN Decoder & Validator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 VIN Decoder & Validator</h1>
+        <p class="subtitle">Enter a 17-character Vehicle Identification Number to validate and decode</p>
+        
+        <div class="input-group">
+            <label for="vinInput">Vehicle Identification Number (VIN)</label>
+            <input 
+                type="text" 
+                id="vinInput" 
+                maxlength="17" 
+                placeholder="e.g., 1HGBH41JXMN109186"
+                autocomplete="off"
+            >
+        </div>
+        
+        <button onclick="validateVIN()">Validate VIN</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script type="module">
+        import { MANUFACTURERS } from './js/manufacturers.js';
+        console.log(MANUFACTURERS['AAA']);
+    </script>
+
+    <script>
+        /*
+        VIN Validation Process
+        ----------------------
+        Additional Rules
+        VIN must be 17 characters long
+        VIN only applies to vehicles with weight < 4.5 tons (10 000 lbs)
+        VIN cannot be a known invalid sequence (e.g., all same char)
+        VIN cannot be older than 1981 (10th char >= 'A')
+        VIN cannot be newer than current year + 2 (10th char <= next year code)
+        VIN cannot contain invalid characters (I, O, Q)
+        As of April 2021, ISO specifies the following codes per country https://en.wikipedia.org/wiki/Vehicle_identification_number#Country_or_region_codes
+        If position seven is numeric, the model year in position 10 of the VIN refers to a year in the range 1980–2009. If position seven is alphabetic, the model year in position 10 of VIN refers to a year in the range 2010–2039.
+
+        Step 1: Input Validation
+        - Must be exactly 17 characters long (VIN_LENGTH)
+        - Must not contain invalid characters (INVALID_CHARS)
+        → If invalid, display "Invalid VIN" message
+
+        Step 2: Check Digit Verification
+        - 9th character = check digit
+        - Computed using TRANSLITERATION and WEIGHTS
+        Algorithm:
+            1. Convert each char to numeric value (TRANSLITERATION)
+            2. Multiply by positional weight (WEIGHTS)
+            3. Sum all products, divide by 11
+            4. Remainder → check digit (10 → 'X')
+        → If computed digit ≠ VIN[8], VIN is invalid
+
+        Step 3: Region & Manufacturer Lookup
+        - Region/Country from VIN[0] via WMI_REGIONS
+        - Manufacturer from VIN[0..2] via MANUFACTURERS
+
+        Step 4: Display Results
+        - Apply .result.valid or .result.invalid class
+        - Show manufacturer, region, and details in results grid
+
+        Summary:
+        1. Get user input → #vinInput.value
+        2. Normalize → uppercase
+        3. Validate structure → length & invalid chars
+        4. Verify check digit → TRANSLITERATION + WEIGHTS
+        5. Lookup manufacturer → MANUFACTURERS[vin.substring(0,3)]
+        6. Lookup region → WMI_REGIONS[vin.charAt(0)]
+        7. Display output → .result container
+        */
+
+
+        // A valid VIN must be exactly 17 characters long. Any other length fails validation.
+        const VIN_LENGTH = 17;
+
+        // Invalid characters in a VIN
+        const INVALID_CHARS = ['I', 'O', 'Q'];
+        
+        // Transliteration table for check digit calculation
+        // Each VIN character (A–Z, 0–9) is converted to a numeric value
+        const TRANSLITERATION = {
+            'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 6, 'G': 7, 'H': 8,
+            'J': 1, 'K': 2, 'L': 3, 'M': 4, 'N': 5, 'P': 7, 'R': 9, 'S': 2, 
+            'T': 3, 'U': 4, 'V': 5, 'W': 6, 'X': 7, 'Y': 8, 'Z': 9, '0': 0, 
+            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, 
+            '9': 9
+        };
+        
+        // Weight factors for check digit calculation
+        // Each position in the VIN (1–17) has an assigned weight for the check digit calculation.
+        const WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
+
+        // Regions have countries and countries have WMIs
+        // WMI belongs to both countries and regions
+        
+        // World Manufacturer Identifier (WMI) - Regions
+        // Maps the first VIN character (1st of 17) to the region or country of origin.
+        const WMI_REGIONS = {
+            // North America
+            NorthAmerica : {
+                '1': ['United States'],
+                '2': ['Canada'],
+                '3': ['Mexico'],
+                '4': ['United States'],
+                '5': ['United States']
+            },
+
+            // Oceania
+            Oceania : {
+                '6': ['Australia'],
+                '7': ['New Zealand']
+            },
+
+            // South America
+            SouthAmerica : {
+                '8': ['Argentina', 'Chile', 'Peru'],
+                '9': ['Brazil', 'Colombia', 'Venezuela']
+            },
+
+            // Africa
+            Africa : {
+                'A': ['South Africa'],
+                'B': ['Angola', 'Kenya', 'Tanzania'],
+                'C': ['Benin', 'Ivory Coast', 'Morocco'],
+                'D': ['Egypt', 'Zambia'],
+                'E': ['Ethiopia'],
+                'F': ['Ghana', 'Nigeria', 'Tunisia'],
+            },
+
+            // Asia
+            Asia :{
+                'J': ['Japan'],
+                'K': ['South Korea', 'Israel', 'Kazakhstan'],
+                'L': ['China', 'Taiwan'],
+                'M': ['India', 'Indonesia', 'Thailand'],
+                'N': ['Pakistan', 'Turkey', 'Iran'],
+                'P': ['Philippines', 'Malaysia', 'Singapore'],
+                'R': ['United Arab Emirates', 'Vietnam', 'Saudi Arabia'],
+            },
+
+            // Europe
+            Europe : {
+                'S': ['United Kingdom', 'Germany', 'Poland', 'Latvia'],
+                'T': ['Switzerland', 'Czech Republic', 'Hungary', 'Portugal'],
+                'U': ['Denmark', 'Ireland', 'Romania', 'Slovakia'],
+                'V': ['France', 'Spain', 'Austria', 'Croatia', 'Serbia'],
+                'W': ['Germany'],
+                'X': ['Russia', 'Bulgaria', 'Greece', 'Netherlands'],
+                'Y': ['Sweden', 'Finland', 'Belgium', 'Malta', 'Norway'],
+                'Z': ['Italy', 'Slovenia', 'Lithuania']
+            },
+        };
+        
+        // Maps the first three characters (WMI) to the specific manufacturer or joint venture.
+        // This mapping is used for brand identification once the VIN is confirmed valid.
+
+        // Model years (10th character)
+        const MODEL_YEARS = {
+            // Note: The cycle repeats every 30 years
+            'A': 1980, 'B': 1981, 'C': 1982, 'D': 1983, 'E': 1984, 'F': 1985,
+            'G': 1986, 'H': 1987, 'J': 1988, 'K': 1989, 'L': 1990, 'M': 1991,
+            'N': 1992, 'P': 1993, 'R': 1994, 'S': 1995, 'T': 1996, 'V': 1997,
+            'W': 1998, 'X': 1999, 'Y': 2000, '1': 2001, '2': 2002, '3': 2003,
+            '4': 2004, '5': 2005, '6': 2006, '7': 2007, '8': 2008, '9': 2009,
+            'A': 2010, 'B': 2011, 'C': 2012, 'D': 2013, 'E': 2014, 'F': 2015,
+            'G': 2016, 'H': 2017, 'J': 2018, 'K': 2019, 'L': 2020, 'M': 2021,
+            'N': 2022, 'P': 2023, 'R': 2024, 'S': 2025, 'T': 2026, 'V': 2027, 
+            'W': 2028, 'X': 2029, 'Y': 2030, '1': 2031, '2': 2032, '3': 2033, 
+            '4': 2034, '5': 2035, '6': 2036, '7': 2037, '8': 2038, '9': 2039,
+        };
+        
+        function validateVIN() {
+            const input = document.getElementById('vinInput').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('result');
+            
+            /* ===========================
+            Step 0: Input Validation
+            =========================== */
+            // Check length
+            if (input.length !== VIN_LENGTH) {
+                showResult(false, `Invalid VIN length. Expected ${VIN_LENGTH} characters, got ${input.length}.`);
+                return;
+            }
+
+            // "11111111111111111" is a known invalid VIN
+            if (input === "11111111111111111") {
+                showResult(false, 'Invalid VIN. VIN cannot be all identical characters.');
+                return;
+            }
+            
+            // Check for invalid characters
+            for (let char of INVALID_CHARS) {
+                if (input.includes(char)) {
+                    showResult(false, `Invalid character "${char}" found. VINs cannot contain I, O, or Q.`);
+                    return;
+                }
+            }
+            
+            // Check if all characters are alphanumeric
+            if (!/^[A-HJ-NPR-Z0-9]+$/.test(input)) {
+                showResult(false, 'VIN contains invalid characters. Only A-Z (except I, O, Q) and 0-9 are allowed.');
+                return;
+            }
+
+            /* ===========================
+            Step 1: Lookup WMI Region (World Manufacturer Identifier)
+                - The first three characters uniquely identify the manufacturer of the vehicle using the World Manufacturer Identifier or WMI code. 
+                - A manufacturer that builds fewer than 1000 vehicles per year uses a 9 as the third digit and the 12th, 13th and 14th position of the VIN for a second part of the identification. 
+                - Some manufacturers use the third character as a code for a vehicle category (e.g., bus or truck), a division within a manufacturer, or both. For example, within 1G (assigned to General Motors in the United States), 1G1 represents Chevrolet passenger cars; 1G2, Pontiac passenger cars; and 1GC, Chevrolet trucks. 
+            =========================== */
+
+            // Get WMI code (first 3 characters)
+            const wmi = input.substring(0, 3);
+            const region = WMI_REGIONS[wmi] || 'Unknown Region';
+            if (region === 'Unknown Region') {
+                showResult(false, 'Unknown WMI region. The first character of the VIN does not match any known region codes.');
+                return;
+            }
+
+            
+            // Validate check digit (9th character)
+            // Note: Check digit validation is primarily used in North American VINs
+            const checkDigitValid = validateCheckDigit(input);
+            const isNorthAmerican = /^[1-5]/.test(input);
+            
+            if (isNorthAmerican && !checkDigitValid) {
+                showResult(false, 'Check digit validation failed. This VIN is not valid.');
+                return;
+            }
+            
+            // If all validations pass, decode the VIN
+            const decodedInfo = decodeVIN(input);
+            decodedInfo.checkDigitValidated = isNorthAmerican ? checkDigitValid : 'N/A (Non-NA VIN)';
+            showResult(true, null, decodedInfo);
+        }
+        
+        function validateCheckDigit(vin) {
+            let sum = 0;
+            
+            for (let i = 0; i < VIN_LENGTH; i++) {
+                const char = vin[i];
+                const value = TRANSLITERATION[char];
+                
+                if (value === undefined) {
+                    return false;
+                }
+                
+                sum += value * WEIGHTS[i];
+            }
+            
+            const checkDigit = sum % 11;
+            const actualCheckDigit = vin[8];
+            
+            if (checkDigit === 10) {
+                return actualCheckDigit === 'X';
+            } else {
+                return actualCheckDigit === checkDigit.toString();
+            }
+        }
+        
+        function decodeVIN(vin) {
+            const wmi = vin.substring(0, 3);
+            const vds = vin.substring(3, 9);
+            const vis = vin.substring(9, 17);
+            
+            const regionCode = vin[0];
+            const region = WMI_REGIONS[regionCode] || 'Unknown Region';
+            
+            const manufacturer = MANUFACTURERS[wmi] || 
+                                MANUFACTURERS[vin.substring(0, 2)] || 
+                                'Unknown Manufacturer';
+            
+            const modelYearChar = vin[9];
+            let modelYear = MODEL_YEARS[modelYearChar];
+            
+            // Handle year ambiguity (30-year cycle)
+            if (modelYear) {
+                const currentYear = new Date().getFullYear();
+                if (modelYear < currentYear - 30) {
+                    modelYear += 30;
+                }
+            } else {
+                modelYear = 'Unknown';
+            }
+            
+            const plantCode = vin[10];
+            const serialNumber = vin.substring(11, 17);
+            
+            return {
+                vin: vin,
+                wmi: wmi,
+                region: region,
+                manufacturer: manufacturer,
+                vds: vds,
+                checkDigit: vin[8],
+                modelYear: modelYear,
+                plantCode: plantCode,
+                serialNumber: serialNumber
+            };
+        }
+        
+        function showResult(isValid, errorMessage, decodedInfo) {
+            const resultDiv = document.getElementById('result');
+            
+            if (isValid) {
+                resultDiv.className = 'result valid';
+                resultDiv.innerHTML = `
+                    <div class="status valid">
+                        <span>✓</span> Valid VIN
+                    </div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">VIN</div>
+                            <div class="info-value">${decodedInfo.vin}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Region</div>
+                            <div class="info-value">${decodedInfo.region}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Manufacturer</div>
+                            <div class="info-value">${decodedInfo.manufacturer}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Model Year</div>
+                            <div class="info-value">${decodedInfo.modelYear}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">WMI Code</div>
+                            <div class="info-value">${decodedInfo.wmi}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Check Digit</div>
+                            <div class="info-value">${decodedInfo.checkDigit}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Plant Code</div>
+                            <div class="info-value">${decodedInfo.plantCode}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Serial Number</div>
+                            <div class="info-value">${decodedInfo.serialNumber}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultDiv.className = 'result invalid';
+                resultDiv.innerHTML = `
+                    <div class="status invalid">
+                        <span>✗</span> Invalid VIN
+                    </div>
+                    <div class="error-message">${errorMessage}</div>
+                `;
+            }
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('vinInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                validateVIN();
+            }
+        });
+    </script>
+</body>
+</html>
