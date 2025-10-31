@@ -211,6 +211,20 @@
             border-radius: 12px;
             border-left: 4px solid #667eea;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-item-with-image {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .info-item-content {
+            flex: 1;
+            min-width: 0;
         }
         
         .info-label {
@@ -226,13 +240,44 @@
             font-size: 16px;
             color: #2d3748;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .info-image {
+            height: 50px;
+            width: auto;
+            max-width: 80px;
+            object-fit: contain;
+            flex-shrink: 0;
         }
         
         .flag {
-            font-size: 24px;
+            font-size: 50px;
+            line-height: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .flag.placeholder-flag {
+            transform: scale(0.7);
+        }
+        
+        .logo-carousel {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .logo-carousel img {
+            height: 50px;
+            width: auto;
+            max-width: 80px;
+            object-fit: contain;
         }
         
         .error-message {
@@ -328,6 +373,20 @@
     </div>
     
     <script>
+        function getRegionImage(region) {
+            if (!region || region === 'Unknown') return null;
+            // Map region names to image files
+            const regionMap = {
+                'Africa': 'Africa.png',
+                'Asia': 'Asia.png',
+                'Europe': 'Europe.png',
+                'North America': 'North America.png',
+                'Oceania': 'Oceania.png',
+                'South America': 'South America.png'
+            };
+            return regionMap[region] || null;
+        }
+        
         function showResult(elementId, isValid, data) {
             const resultDiv = document.getElementById(elementId);
             
@@ -346,6 +405,83 @@
             const checkStatus = data.check_digit_valid ? '✓ Valid' : '✗ Invalid';
             const checkColor = data.check_digit_valid ? '#16a34a' : '#dc2626';
             
+            // Region info with image
+            const regionImage = getRegionImage(data.region);
+            const regionHTML = regionImage 
+                ? `
+                    <div class="info-item info-item-with-image">
+                        <div class="info-item-content">
+                            <div class="info-label">Region</div>
+                            <div class="info-value">${data.region || 'Unknown'}</div>
+                        </div>
+                        <img src="/img/regions/${regionImage}" alt="${data.region}" class="info-image">
+                    </div>
+                `
+                : `
+                    <div class="info-item info-item-with-image">
+                        <div class="info-item-content">
+                            <div class="info-label">Region</div>
+                            <div class="info-value">${data.region || 'Unknown'}</div>
+                        </div>
+                        <span class="flag info-image placeholder-flag">🏳</span>
+                    </div>
+                `;
+            
+            // Country info with flag
+            const countryFlagClass = (data.country_flag === '🏳️' || data.country_flag === '🏳' || !data.country_flag) ? 'flag info-image placeholder-flag' : 'flag info-image';
+            const countryHTML = `
+                <div class="info-item info-item-with-image">
+                    <div class="info-item-content">
+                        <div class="info-label">Country</div>
+                        <div class="info-value">${data.country || 'Unknown'}</div>
+                    </div>
+                    <span class="${countryFlagClass}">${data.country_flag || '🏳'}</span>
+                </div>
+            `;
+            
+            // Manufacturer info with logos
+            let manufacturerHTML;
+            if (data.manufacturer_logos && data.manufacturer_logos.length > 0) {
+                const logosHTML = data.manufacturer_logos.map(logo => 
+                    `<img src="/img/logos/${logo}" alt="Logo">`
+                ).join('');
+                
+                // If more than 2 logos, stack them below the text
+                if (data.manufacturer_logos.length > 2) {
+                    manufacturerHTML = `
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <div class="info-label">Manufacturer</div>
+                            <div class="info-value">${data.manufacturer}</div>
+                            <div class="logo-carousel" style="margin-top: 12px;">
+                                ${logosHTML}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    manufacturerHTML = `
+                        <div class="info-item info-item-with-image" style="grid-column: 1 / -1;">
+                            <div class="info-item-content">
+                                <div class="info-label">Manufacturer</div>
+                                <div class="info-value">${data.manufacturer}</div>
+                            </div>
+                            <div class="logo-carousel">
+                                ${logosHTML}
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                manufacturerHTML = `
+                    <div class="info-item info-item-with-image" style="grid-column: 1 / -1;">
+                        <div class="info-item-content">
+                            <div class="info-label">Manufacturer</div>
+                            <div class="info-value">${data.manufacturer}</div>
+                        </div>
+                        <span class="flag info-image placeholder-flag">🏳</span>
+                    </div>
+                `;
+            }
+            
             resultDiv.className = 'result valid';
             resultDiv.innerHTML = `
                 <div class="status valid">
@@ -357,27 +493,9 @@
                         <div class="info-label">VIN Number</div>
                         <div class="info-value vin-display">${data.vin}</div>
                     </div>
-                    <div class="info-item">
-                        <div class="info-label">Region</div>
-                        <div class="info-value">
-                            <span class="flag">${data.region_flag || '🌍'}</span>
-                            ${data.region || 'Unknown'}
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Country</div>
-                        <div class="info-value">
-                            <span class="flag">${data.country_flag || '🏳️'}</span>
-                            ${data.country || 'Unknown'}
-                        </div>
-                    </div>
-                    <div class="info-item" style="grid-column: 1 / -1;">
-                        <div class="info-label">Manufacturer</div>
-                        <div class="info-value">
-                            <span class="flag">${data.factory_flag || '🏭'}</span>
-                            ${data.manufacturer}
-                        </div>
-                    </div>
+                    ${regionHTML}
+                    ${countryHTML}
+                    ${manufacturerHTML}
                     <div class="info-item">
                         <div class="info-label">Model Year</div>
                         <div class="info-value">${data.model_year}</div>
@@ -442,9 +560,12 @@
         
         async function generateVIN() {
             const input = document.getElementById('generatedVIN');
-            const btn = event.target;
-            btn.classList.add('loading');
-            btn.textContent = 'Generating...';
+            const btn = document.querySelector('button[onclick="generateVIN()"]');
+            
+            if (btn) {
+                btn.classList.add('loading');
+                btn.textContent = 'Generating...';
+            }
             
             try {
                 const response = await fetch('/api/generate', {
@@ -458,21 +579,25 @@
             } catch (error) {
                 console.error('Error:', error);
             } finally {
-                btn.classList.remove('loading');
-                btn.textContent = '✨ Generate VIN';
+                if (btn) {
+                    btn.classList.remove('loading');
+                    btn.textContent = '✨ Generate VIN';
+                }
             }
         }
         
         function copyVIN() {
             const input = document.getElementById('generatedVIN');
-            const btn = event.target;
+            const btn = document.querySelector('button[onclick="copyVIN()"]');
             
             if (!input.value) return;
             
             navigator.clipboard.writeText(input.value).then(() => {
-                const originalText = btn.textContent;
-                btn.textContent = '✓ Copied!';
-                setTimeout(() => btn.textContent = originalText, 1500);
+                if (btn) {
+                    const originalText = btn.textContent;
+                    btn.textContent = '✓ Copied!';
+                    setTimeout(() => btn.textContent = originalText, 1500);
+                }
             });
         }
         

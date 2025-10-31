@@ -1,9 +1,8 @@
-"""
-Flask VIN Decoder & Generator Application
-Uses the VIN database for accurate decoding
-"""
-from flask import Flask, render_template, request, jsonify
+"""Flask VIN Decoder & Generator Application
+Uses the VIN database for accurate decoding"""
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from models.country import db, Country, WmiRegionCode, WmiCountryCode, WmiFactoryCode
+from sqlalchemy import text
 import random
 from datetime import datetime
 import os
@@ -11,7 +10,6 @@ import os
 app = Flask(__name__)
 
 # Define the absolute path to the database
-# app.root_path is the directory where vin_app.py resides
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'instance', 'vin.db')
 
@@ -43,19 +41,16 @@ MODEL_YEARS = {
     '4': 2034, '5': 2035, '6': 2036, '7': 2037, '8': 2038, '9': 2039
 }
 
-
 def compute_check_digit(vin):
     """Compute VIN check digit"""
     total = sum(TRANSLITERATION.get(vin[i], 0) * WEIGHTS[i] for i in range(VIN_LENGTH))
     remainder = total % 11
     return 'X' if remainder == 10 else str(remainder)
 
-
 def validate_check_digit(vin):
     """Validate VIN check digit"""
     computed = compute_check_digit(vin)
     return vin[8] == computed
-
 
 def resolve_model_year(char):
     """Resolve model year with 30-year cycle"""
@@ -71,6 +66,16 @@ def resolve_model_year(char):
     
     return year if year <= current_year else None
 
+def get_factory_logos(factory_id):
+    """Get all logos for a factory"""
+    query = text("""
+        SELECT logo_filename 
+        FROM factory_logos 
+        WHERE factory_id = :factory_id
+    """)
+    result = db.session.execute(query, {'factory_id': factory_id})
+    logos = [row[0] for row in result.fetchall()]
+    return logos
 
 def decode_vin(vin):
     """Decode VIN using database"""
@@ -128,14 +133,18 @@ def decode_vin(vin):
         result['manufacturer'] = factory_entry.manufacturer
         result['factory_country'] = factory_entry.country.common_name if factory_entry.country else factory_entry.region
         result['factory_flag'] = factory_entry.country.flag_emoji if factory_entry.country else '🏭'
+        
+        # Get manufacturer logos
+        logos = get_factory_logos(factory_entry.id)
+        result['manufacturer_logos'] = logos if logos else []
     else:
         result['manufacturer'] = 'Unknown Manufacturer'
+        result['manufacturer_logos'] = []
     
     # Model year
     result['model_year'] = resolve_model_year(vin[9]) or 'Unknown'
     
     return result
-
 
 def generate_vin():
     """Generate a random valid VIN"""
@@ -168,11 +177,14 @@ def generate_vin():
     
     return ''.join(vin_array)
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/img/<path:filename>')
+def serve_image(filename):
+    """Serve images from the img directory"""
+    return send_from_directory('img', filename)
 
 @app.route('/api/decode', methods=['POST'])
 def api_decode():
@@ -181,13 +193,11 @@ def api_decode():
     result = decode_vin(vin)
     return jsonify(result)
 
-
 @app.route('/api/generate', methods=['POST'])
 def api_generate():
     vin = generate_vin()
     decoded = decode_vin(vin)
     return jsonify(decoded)
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
