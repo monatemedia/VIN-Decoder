@@ -31,3 +31,9 @@ desktop.ini
 # Environment variables
 .env
 .env.local
+
+# Logos
+/logos/
+
+# Images
+/img/
